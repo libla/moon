@@ -116,6 +116,10 @@ int main(int argc, char* argv[]) {
 #ifdef LUA_CACHELIB
     luaL_initcodecache();
 #endif
+#if TARGET_PLATFORM == PLATFORM_WINDOWS
+    UINT oldcp = CP_UTF8;
+#endif
+
     try {
         uint32_t thread_count = std::thread::hardware_concurrency();
         bool enable_stdout = true;
@@ -253,6 +257,14 @@ int main(int argc, char* argv[]) {
         log::instance().set_level(loglevel);
         log::instance().init(logfile);
 
+        #if TARGET_PLATFORM == PLATFORM_WINDOWS
+        if (enable_stdout) {
+            oldcp = GetConsoleOutputCP();
+            if (oldcp != CP_UTF8)
+                SetConsoleOutputCP(CP_UTF8);
+        }
+        #endif
+
         server_->init(thread_count);
 
         auto conf = std::make_unique<moon::service_conf>();
@@ -282,6 +294,12 @@ int main(int argc, char* argv[]) {
         thread_sleep(10);
     print_mem_stats();
     log::instance().wait();
+
+    #if TARGET_PLATFORM == PLATFORM_WINDOWS
+    if (oldcp != CP_UTF8)
+        SetConsoleOutputCP(oldcp);
+    #endif
+
     return exitcode;
 }
 
